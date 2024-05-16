@@ -7,6 +7,12 @@ require 'open-uri'
 # Misskey Media Proxy
 get '/proxy' do
   url = params[:url]
+  origin = params[:origin]
+  emoji = params[:emoji]
+  avatar = params[:avatar]
+  static = params[:static]
+  preview = params[:preview]
+  badge = params[:badge]
 
   unless url
     status 400
@@ -18,16 +24,40 @@ get '/proxy' do
 
     image = MiniMagick::Image.read(io)
 
-    # 画像の圧縮
-    image.combine_options do |c|
-      c.quality '80%' # 画像の品質を指定（0〜100%）
-      c.resize '360x360' # 画像のリサイズ
+    # パラメータに応じて処理を行う
+    if origin
+      # 外部メディアプロキシへのリダイレクトを行わない
+      content_type image.mime_type
+      return image.to_blob
+    elsif emoji
+      # 高さ128px以下のwebpが応答される
+      image.resize 'x128'
+    elsif avatar
+      # 高さ320px以下のwebpが応答される
+      image.resize 'x320'
+    elsif static
+      # アニメーション画像では最初のフレームのみの静止画のwebpが応答される
+      image.pages 'x1'
+    elsif preview
+      # 幅200px・高さ200pxに収まるサイズ以下のwebpが応答される
+      image.resize '200x200>'
+    elsif badge
+      # Webプッシュ通知のバッジに適したpngが応答される
+      badge_image = MiniMagick::Image.open('path/to/badge_image.png')
+      badge_image.resize '96x96'
+      content_type badge_image.mime_type
+      return badge_image.to_blob
+    else
+      # デフォルトの処理
+      image.resize '360x360'
     end
 
     content_type 'image/jpeg'
+    image.quality '80%'
     image.to_blob
-  rescue => e
+
+  rescue Errno::ECONNREFUSED, OpenURI::HTTPError, Errno::ENOENT => e
     status 500
-    body "An error occurred: #{e.message}"
+    body "An error occurred: #{e.class} - #{e.message}"
   end
 end
