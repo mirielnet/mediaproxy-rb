@@ -14,7 +14,9 @@ get '/proxy' do
   preview = params[:preview]
   
   # /media/avatar.webp?url=URL&avatar=1 の形式もサポートする
-  avatar = params[:avatar] || params[:path].include?('avatar.webp')
+  if params[:path]&.include?('avatar.webp')
+    avatar = true
+  end
 
   unless url
     status 400
