@@ -13,6 +13,9 @@ get '/proxy' do
   static = params[:static]
   preview = params[:preview]
   
+  # /media/avatar.webp?url=URL&avatar=1 の形式もサポートする
+  avatar = params[:avatar] || params[:path].include?('avatar.webp')
+
   unless url
     status 400
     return 'URL parameter is required'
@@ -45,8 +48,15 @@ get '/proxy' do
       image.resize '360x360'
     end
 
-    content_type 'image/jpeg'
-    image.quality '80%'
+    # avatarパラメータが指定されている場合は、webpで出力
+    if avatar
+      content_type 'image/webp'
+      image.format 'webp'
+    else
+      content_type 'image/jpeg'
+      image.quality '80%'
+    end
+
     image.to_blob
 
   rescue Errno::ECONNREFUSED, OpenURI::HTTPError, Errno::ENOENT => e
