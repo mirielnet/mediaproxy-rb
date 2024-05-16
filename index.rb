@@ -4,7 +4,42 @@ require 'sinatra'
 require 'mini_magick'
 require 'open-uri'
 
-# Misskey Media Proxy
+# /proxy/avatar.webp ルート
+get '/proxy/avatar.webp' do
+  url = params[:url]
+  avatar = true
+
+  unless url
+    status 400
+    return 'URL parameter is required'
+  end
+
+  begin
+    io = URI.open(url)
+    image = MiniMagick::Image.read(io)
+
+    # avatar パラメータが指定されている場合は、WebP 形式で出力
+    if avatar
+      content_type 'image/webp'
+      image.format 'webp'
+    else
+      content_type 'image/jpeg'
+    end
+
+    # 画像の圧縮
+    image.combine_options do |c|
+      c.quality '80%' # 画像の品質を指定（0〜100%）
+      c.resize '360x360' # 画像のリサイズ
+    end
+
+    image.to_blob
+  rescue Errno::ECONNREFUSED, OpenURI::HTTPError, Errno::ENOENT => e
+    status 500
+    body "An error occurred: #{e.class} - #{e.message}"
+  end
+end
+
+# /proxy ルート
 get '/proxy' do
   url = params[:url]
   origin = params[:origin]
@@ -12,8 +47,8 @@ get '/proxy' do
   avatar = params[:avatar]
   static = params[:static]
   preview = params[:preview]
-  
-  # /media/avatar.webp?url=URL&avatar=1 の形式もサポートする
+
+  # /proxy/avatar.webp?url=URL の形式もサポートする
   if params[:path]&.include?('avatar.webp')
     avatar = true
   end
