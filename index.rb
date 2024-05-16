@@ -54,3 +54,9 @@ get '/proxy' do
     body "An error occurred: #{e.class} - #{e.message}"
   end
 end
+
+# Sinatraアプリケーションを実行するためのコード
+if __FILE__ == $0
+  set :bind, '0.0.0.0'
+  set :port, 4567
+end
