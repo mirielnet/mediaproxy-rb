@@ -12,8 +12,7 @@ get '/proxy' do
   avatar = params[:avatar]
   static = params[:static]
   preview = params[:preview]
-  badge = params[:badge]
-
+  
   unless url
     status 400
     return 'URL parameter is required'
@@ -41,12 +40,6 @@ get '/proxy' do
     elsif preview
       # 幅200px・高さ200pxに収まるサイズ以下のwebpが応答される
       image.resize '200x200>'
-    elsif badge
-      # Webプッシュ通知のバッジに適したpngが応答される
-      badge_image = MiniMagick::Image.open('path/to/badge_image.png')
-      badge_image.resize '96x96'
-      content_type badge_image.mime_type
-      return badge_image.to_blob
     else
       # デフォルトの処理
       image.resize '360x360'
